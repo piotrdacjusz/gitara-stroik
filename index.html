@@ -12,16 +12,21 @@
 <title>Stroik</title>
 <style>
   :root { --tlo:#111417; --karta:#1b2026; --tekst:#e8edf2; --szary:#8b97a3;
-          --ok:#38d17a; --nisko:#f2b23c; --wysoko:#e8683c; }
+          --ok:#38d17a; --nisko:#f2b23c; --wysoko:#e8683c; --ramka:#2b333c; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { margin:0; background:var(--tlo); color:var(--tekst); font:16px/1.4 -apple-system,system-ui,sans-serif;
-         padding:env(safe-area-inset-top) 14px calc(14px + env(safe-area-inset-bottom)); max-width:560px; margin-inline:auto; }
-  select, button { font:inherit; color:var(--tekst); background:var(--karta); border:1px solid #2b333c;
-                   border-radius:12px; padding:11px; }
+  body { margin:0 auto; max-width:560px; background:var(--tlo); color:var(--tekst);
+         font:16px/1.4 -apple-system,system-ui,sans-serif;
+         padding:env(safe-area-inset-top) 14px calc(20px + env(safe-area-inset-bottom)); }
+  select, button, input { font:inherit; color:var(--tekst); background:var(--karta);
+                          border:1px solid var(--ramka); border-radius:12px; padding:11px; }
   select { width:100%; -webkit-appearance:none; appearance:none; }
+  input { width:100%; -webkit-appearance:none; }
   label { display:block; font-size:12px; color:var(--szary); text-transform:uppercase;
           letter-spacing:.06em; margin:14px 0 5px; }
-  #start { width:100%; padding:20px; margin:18px 0; background:var(--ok); color:#06220f;
+  nav { display:flex; gap:8px; margin:12px 0 4px; }
+  nav button { flex:1; padding:13px; font-weight:600; color:var(--szary); }
+  nav button[aria-selected="true"] { background:#22303a; color:var(--tekst); border-color:var(--ok); }
+  #start { width:100%; padding:20px; margin:14px 0; background:var(--ok); color:#06220f;
            border:0; font-size:19px; font-weight:600; }
   .wskaznik { background:var(--karta); border-radius:18px; padding:18px; text-align:center; margin:14px 0; }
   #nuta { font-size:74px; font-weight:300; line-height:1; letter-spacing:-.02em; }
@@ -35,64 +40,79 @@
   .skala { display:flex; justify-content:space-between; color:#5d6873; font-size:11px; }
   #centy { font-size:17px; font-variant-numeric:tabular-nums; font-weight:600; }
   .struny { display:grid; grid-template-columns:repeat(auto-fit,minmax(78px,1fr)); gap:8px; margin-top:12px; }
-  .struna { background:var(--karta); border:1px solid #2b333c; border-radius:12px; padding:10px 6px;
-            text-align:center; cursor:pointer; }
+  .struna { background:var(--karta); border:1px solid var(--ramka); border-radius:12px;
+            padding:10px 6px; text-align:center; cursor:pointer; }
   .struna.akt { border-color:var(--ok); background:#15291e; }
   .struna.lock { border-color:#5b8cff; background:#161d2e; }
   .struna u { display:block; font-size:21px; font-weight:500; text-decoration:none; }
   .struna small { color:var(--szary); font-size:10.5px; }
-  .rzad { display:flex; gap:8px; align-items:center; }
-  .rzad select { flex:1; }
-  footer { color:#5d6873; font-size:12px; text-align:center; margin:20px 0 4px; }
+  .rzad { display:flex; gap:8px; }
+  .rzad > div { flex:1; }
+  .szybkie { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .szybkie button { padding:9px 13px; font-size:15px; }
+  .chwyty { display:grid; grid-template-columns:repeat(auto-fit,minmax(142px,1fr)); gap:10px; margin-top:14px; }
+  .chwyt { background:var(--karta); border:1px solid var(--ramka); border-radius:14px;
+           padding:10px 6px 8px; text-align:center; cursor:pointer; }
+  .chwyt h3 { margin:0 0 2px; font-size:15px; font-weight:600; }
+  .chwyt p { margin:0 0 6px; font-size:11px; color:var(--szary); }
+  .blad { color:var(--wysoko); font-size:14px; margin-top:12px; }
+  .podpis { color:#5d6873; font-size:12px; margin-top:10px; }
+  footer { color:#5d6873; font-size:12px; text-align:center; margin:18px 0 4px; }
+  hr { border:0; border-top:1px solid var(--ramka); margin:22px 0 0; }
 </style>
 </head>
 <body>
 
-<button id="start">Włącz mikrofon</button>
+<nav>
+  <button id="tab-stroik" aria-selected="true">Stroik</button>
+  <button id="tab-chwyty" aria-selected="false">Chwyty</button>
+</nav>
 
-<div class="wskaznik">
-  <div id="nuta">—</div>
-  <div id="opis"></div>
-  <div class="pasek"><i></i><b id="igla"></b></div>
-  <div class="skala"><span>−50</span><span id="centy">·</span><span>+50</span></div>
-  <div id="hz"></div>
-</div>
+<section id="ekran-stroik">
+  <button id="start">Włącz mikrofon</button>
+  <div class="wskaznik">
+    <div id="nuta">—</div>
+    <div id="opis"></div>
+    <div class="pasek"><i></i><b id="igla"></b></div>
+    <div class="skala"><span>−50</span><span id="centy">·</span><span>+50</span></div>
+    <div id="hz"></div>
+  </div>
+  <div class="struny" id="struny"></div>
+  <label>Ton wzorcowy</label>
+  <button id="ton" style="width:100%">♪ Zagraj zaznaczoną strunę</button>
+  <footer>Dotknij strunę, żeby zablokować ją na stałe · ponownie, żeby wrócić do auto</footer>
+</section>
 
-<div class="struny" id="struny"></div>
+<section id="ekran-chwyty" hidden>
+  <label>Akord — wpisz, jak ma zabrzmieć</label>
+  <input id="akord" type="text" value="C" autocapitalize="characters" autocomplete="off"
+         spellcheck="false" placeholder="np. Am7, Fmaj7, D/F#">
+  <div class="szybkie" id="szybkie"></div>
+  <div id="wyniki"></div>
+  <div class="podpis" id="podpis-chwytow"></div>
+</section>
 
+<hr>
 <label>Instrument</label>
 <select id="instrument"></select>
-
 <label>Strój</label>
 <select id="stroj"></select>
-
 <div class="rzad">
-  <div style="flex:1">
-    <label>Kapodaster</label>
-    <select id="kapo"></select>
-  </div>
-  <div style="flex:1">
-    <label>Kalibracja A4</label>
-    <select id="a4"></select>
-  </div>
+  <div><label>Kapodaster</label><select id="kapo"></select></div>
+  <div><label>Kalibracja A4</label><select id="a4"></select></div>
 </div>
-
-<label>Ton wzorcowy</label>
-<button id="ton" style="width:100%">♪ Zagraj zaznaczoną strunę</button>
-
-<footer>Dotknij strunę, żeby zablokować ją na stałe · ponownie, żeby wrócić do auto</footer>
 
 <script type="module">
 import { INSTRUMENTY, zKapodastrem, najblizszaStruna, nazwaNuty, midiNaHz, yin } from './core.js';
+import { parsujAkord, generujChwyty, kursyDoChwytow } from './akordy.js';
 
 const $ = (id) => document.getElementById(id);
-const el = { nuta:$('nuta'), opis:$('opis'), igla:$('igla'), centy:$('centy'), hz:$('hz'),
-             struny:$('struny'), instrument:$('instrument'), stroj:$('stroj'),
-             kapo:$('kapo'), a4:$('a4'), start:$('start'), ton:$('ton') };
+const el = Object.fromEntries(['nuta','opis','igla','centy','hz','struny','instrument','stroj',
+  'kapo','a4','start','ton','akord','szybkie','wyniki','podpis-chwytow','ekran-stroik',
+  'ekran-chwyty','tab-stroik','tab-chwyty'].map((id) => [id, $(id)]));
 
-const opcje = (sel, lista, etykieta = (v) => v) => {
-  sel.innerHTML = lista.map((v) => `<option value="${v}">${etykieta(v)}</option>`).join('');
-};
+const opcje = (sel, lista, etykieta = (v) => v) =>
+  (sel.innerHTML = lista.map((v) => `<option value="${v}">${etykieta(v)}</option>`).join(''));
 
 opcje(el.instrument, Object.keys(INSTRUMENTY));
 opcje(el.kapo, [...Array(13).keys()], (n) => (n === 0 ? 'bez kapo' : `${n}. próg`));
@@ -101,6 +121,7 @@ el.a4.value = 440;
 
 let struny = [], zablokowana = null, wybrana = 0;
 
+// ——— ustawienia wspólne dla obu ekranów ———
 function odswiezStroje() {
   opcje(el.stroj, Object.keys(INSTRUMENTY[el.instrument.value]));
   odswiezStruny();
@@ -115,7 +136,12 @@ function odswiezStruny() {
       <u>${nazwaNuty(s.midi)}</u>
       <small>${s.opis || midiNaHz(s.midi, a4).toFixed(1) + ' Hz'}</small>
     </div>`).join('');
+  rysuj(null);
+  pokazChwyty();
 }
+
+el.instrument.onchange = odswiezStroje;
+[el.stroj, el.kapo, el.a4].forEach((s) => (s.onchange = odswiezStruny));
 
 el.struny.onclick = (e) => {
   const kafel = e.target.closest('.struna');
@@ -126,11 +152,19 @@ el.struny.onclick = (e) => {
   rysuj(null);
 };
 
-[el.instrument].forEach((s) => (s.onchange = odswiezStroje));
-[el.stroj, el.kapo, el.a4].forEach((s) => (s.onchange = odswiezStruny));
-odswiezStroje();
+// ——— zakładki ———
+const pokazEkran = (chwyty) => {
+  el['ekran-stroik'].hidden = chwyty;
+  el['ekran-chwyty'].hidden = !chwyty;
+  el['tab-stroik'].ariaSelected = String(!chwyty);
+  el['tab-chwyty'].ariaSelected = String(chwyty);
+};
+el['tab-stroik'].onclick = () => pokazEkran(false);
+el['tab-chwyty'].onclick = () => pokazEkran(true);
+// Skrót prosto do chwytów: .../#chwyty (da się dodać na ekran początkowy osobno).
+if (location.hash === '#chwyty') pokazEkran(true);
 
-// ——— wskaźnik ———
+// ——— stroik ———
 function rysuj(hz) {
   [...el.struny.children].forEach((k, i) => {
     k.classList.toggle('lock', i === zablokowana);
@@ -149,8 +183,7 @@ function rysuj(hz) {
 
   const a4 = +el.a4.value;
   const cel = zablokowana !== null
-    ? (() => { const s = struny[zablokowana];
-               const f = midiNaHz(s.midi, a4);
+    ? (() => { const s = struny[zablokowana], f = midiNaHz(s.midi, a4);
                return { nr: zablokowana, struna: s, hzCel: f, centy: 1200 * Math.log2(hz / f) }; })()
     : najblizszaStruna(hz, struny, a4);
 
@@ -163,11 +196,11 @@ function rysuj(hz) {
   el.igla.style.left = `${50 + c}%`;
   el.igla.style.background = kolor;
   el.centy.style.color = kolor;
-  el.centy.textContent = Math.abs(cel.centy) <= 4 ? 'czysto' : `${cel.centy > 0 ? '+' : '−'}${Math.abs(cel.centy).toFixed(1)}`;
+  el.centy.textContent = Math.abs(cel.centy) <= 4
+    ? 'czysto' : `${cel.centy > 0 ? '+' : '−'}${Math.abs(cel.centy).toFixed(1)}`;
   el.hz.textContent = `${hz.toFixed(2)} Hz · cel ${cel.hzCel.toFixed(2)} Hz`;
 }
 
-// ——— mikrofon ———
 let ctx;
 el.start.onclick = async () => {
   try {
@@ -190,31 +223,124 @@ function sluchaj(analiza) {
   const buf = new Float32Array(analiza.fftSize);
   const ostatnie = [];           // mediana z 5 ramek — bez niej cyfry skaczą
   const petla = () => {
-    analiza.getFloatTimeDomainData(buf);
-    const hz = yin(buf, ctx.sampleRate);
-    if (hz > 0) ostatnie.push(hz); else ostatnie.length = 0;
-    if (ostatnie.length > 5) ostatnie.shift();
-    rysuj(ostatnie.length >= 3 ? [...ostatnie].sort((a, b) => a - b)[ostatnie.length >> 1] : null);
+    if (!el['ekran-stroik'].hidden) {
+      analiza.getFloatTimeDomainData(buf);
+      const hz = yin(buf, ctx.sampleRate);
+      if (hz > 0) ostatnie.push(hz); else ostatnie.length = 0;
+      if (ostatnie.length > 5) ostatnie.shift();
+      rysuj(ostatnie.length >= 3 ? [...ostatnie].sort((a, b) => a - b)[ostatnie.length >> 1] : null);
+    }
     requestAnimationFrame(petla);
   };
   petla();
 }
 
-// ——— ton wzorcowy ———
-el.ton.onclick = async () => {
+// ——— dźwięk ———
+async function zagraj(midi, opoznienie = 0, dlugosc = 2) {
   ctx ??= new AudioContext();
   await ctx.resume();
-  const t = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const g = ctx.createGain();
+  const t = ctx.currentTime + opoznienie;
+  const osc = ctx.createOscillator(), g = ctx.createGain();
   osc.type = 'triangle';
-  osc.frequency.value = midiNaHz(struny[zablokowana ?? wybrana].midi, +el.a4.value);
+  osc.frequency.value = midiNaHz(midi, +el.a4.value);
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.25, t + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 2);
+  g.gain.linearRampToValueAtTime(0.2, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dlugosc);
   osc.connect(g).connect(ctx.destination);
-  osc.start(t); osc.stop(t + 2);
+  osc.start(t); osc.stop(t + dlugosc);
+}
+
+el.ton.onclick = () => zagraj(struny[zablokowana ?? wybrana].midi);
+
+// ——— chwyty ———
+const SZYBKIE = ['C','D','E','F','G','A','H','Am','Dm','Em','Fm','Gm','Hm','A7','D7','E7','G7','H7'];
+el.szybkie.innerHTML = SZYBKIE.map((n) => `<button data-akord="${n}">${n}</button>`).join('');
+el.szybkie.onclick = (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  el.akord.value = b.dataset.akord;
+  pokazChwyty();
 };
+el.akord.oninput = pokazChwyty;
+
+/** Diagram chwytu: struny pionowo, progi poziomo, numery palców w kropkach. */
+function diagram(chwyt, kursy) {
+  const n = kursy.length;
+  const SZER = 22, WYS = 26, L = 26, G = 24;
+  const od = chwyt.pozycja > 1 ? chwyt.pozycja : 1;        // pierwszy próg na diagramie
+  const w = L + (n - 1) * SZER + 20, h = G + 5 * WYS;
+  const x = (i) => L + i * SZER;
+  const y = (prog) => G + (prog - od + 0.5) * WYS;
+
+  const czesci = [];
+  // Siodełko albo numer progu z boku.
+  czesci.push(od === 1
+    ? `<rect x="${L - 1}" y="${G - 4}" width="${(n - 1) * SZER + 2}" height="4" fill="#8b97a3" rx="1"/>`
+    : `<text x="4" y="${y(od) + 4}" fill="#5d6873" font-size="11">${od}</text>`);
+  for (let p = 0; p <= 5; p++)
+    czesci.push(`<line x1="${L}" y1="${G + p * WYS}" x2="${L + (n - 1) * SZER}" y2="${G + p * WYS}" stroke="#39434e"/>`);
+  for (let i = 0; i < n; i++)
+    czesci.push(`<line x1="${x(i)}" y1="${G}" x2="${x(i)}" y2="${G + 5 * WYS}" stroke="#39434e"/>`);
+
+  if (chwyt.barre) {
+    const { od: a, do: b, prog } = chwyt.barre;
+    czesci.push(`<rect x="${x(a) - 8}" y="${y(prog) - 8}" width="${x(b) - x(a) + 16}" height="16"
+                  rx="8" fill="#38d17a"/>`);
+  }
+
+  chwyt.progi.forEach((prog, i) => {
+    if (prog === -1) czesci.push(`<text x="${x(i)}" y="${G - 7}" fill="#8b97a3" font-size="13"
+                                   text-anchor="middle">×</text>`);
+    else if (prog === 0) czesci.push(`<circle cx="${x(i)}" cy="${G - 11}" r="4.5" fill="none" stroke="#8b97a3"/>`);
+    else if (!(chwyt.barre && prog === chwyt.barre.prog))
+      czesci.push(`<circle cx="${x(i)}" cy="${y(prog)}" r="8" fill="#38d17a"/>`);
+    if (prog > 0) czesci.push(`<text x="${x(i)}" y="${y(prog) + 4}" fill="#06220f" font-size="11"
+                                font-weight="700" text-anchor="middle">${chwyt.palce[i]}</text>`);
+  });
+
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-height:150px">${czesci.join('')}</svg>`;
+}
+
+function pokazChwyty() {
+  if (!el.akord) return;
+  const akord = parsujAkord(el.akord.value);
+  const kursy = kursyDoChwytow(struny);
+  const kapo = +el.kapo.value;
+
+  el['podpis-chwytow'].textContent = kapo
+    ? `Progi liczone od kapodastra (${kapo}. próg). Akord brzmi tak, jak go wpisujesz.`
+    : 'Układy wyliczone dla aktualnego stroju. Dotknij diagram, żeby usłyszeć akord.';
+
+  if (!akord) {
+    el.wyniki.innerHTML = `<p class="blad">Nie znam takiego akordu. Działa np. C, Am7, Fmaj7, D/F#, Hsus4.</p>`;
+    return;
+  }
+
+  const chwyty = generujChwyty(kursy, akord);
+  if (!chwyty.length) {
+    el.wyniki.innerHTML = `<p class="blad">${akord.nazwa} nie da się zagrać w tym stroju w żadnym
+      grywalnym układzie. Spróbuj innego kapodastra.</p>`;
+    return;
+  }
+
+  el.wyniki.innerHTML = `<div class="chwyty">${chwyty.map((ch, i) => `
+    <div class="chwyt" data-i="${i}">
+      <h3>${ch.przewrot ? ch.opis : akord.nazwa}</h3>
+      <p>${ch.przewrot ? 'przewrót' : ch.opis}</p>
+      ${diagram(ch, kursy)}
+    </div>`).join('')}</div>`;
+
+  el.wyniki.onclick = (e) => {
+    const kafel = e.target.closest('.chwyt');
+    if (!kafel) return;
+    const ch = chwyty[+kafel.dataset.i];
+    ch.progi.forEach((prog, i) => {
+      if (prog >= 0) zagraj(kursy[i].midi + prog, i * 0.06, 1.6);
+    });
+  };
+}
+
+odswiezStroje();
 </script>
 </body>
 </html>
