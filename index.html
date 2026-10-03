@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Stroik">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="ikona.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#111417">
 <title>Stroik</title>
 <style>
@@ -367,6 +368,9 @@ function pokazChwyty() {
 }
 
 odswiezStroje();
+
+// Bez zasięgu aplikacja działa dalej; na Androidzie to też warunek instalacji.
+navigator.serviceWorker?.register('sw.js').catch(() => { /* trudno, działa bez tego */ });
 </script>
 </body>
 </html>

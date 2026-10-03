@@ -1,0 +1,17 @@
+{
+  "name": "Stroik gitarowy",
+  "short_name": "Stroik",
+  "description": "Stroik i generator chwytów dla gitary, dwunastki i ukulele — z kapodastrem.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111417",
+  "theme_color": "#111417",
+  "icons": [
+    { "src": "ikona-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "ikona-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "ikona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
