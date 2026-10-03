@@ -29,6 +29,7 @@
   #start { width:100%; padding:20px; margin:14px 0; background:var(--ok); color:#06220f;
            border:0; font-size:19px; font-weight:600; }
   .wskaznik { background:var(--karta); border-radius:18px; padding:18px; text-align:center; margin:14px 0; }
+  .wskaznik.echo { opacity:.45; }           /* struna wybrzmiała — to ostatni odczyt */
   #nuta { font-size:74px; font-weight:300; line-height:1; letter-spacing:-.02em; }
   #opis { color:var(--szary); font-size:13px; min-height:1.4em; }
   #hz { color:var(--szary); font-size:13px; font-variant-numeric:tabular-nums; }
@@ -70,7 +71,7 @@
 
 <section id="ekran-stroik">
   <button id="start">Włącz mikrofon</button>
-  <div class="wskaznik">
+  <div class="wskaznik" id="wskaznik">
     <div id="nuta">—</div>
     <div id="opis"></div>
     <div class="pasek"><i></i><b id="igla"></b></div>
@@ -165,7 +166,8 @@ el['tab-chwyty'].onclick = () => pokazEkran(true);
 if (location.hash === '#chwyty') pokazEkran(true);
 
 // ——— stroik ———
-function rysuj(hz) {
+function rysuj(hz, echo = false) {
+  $('wskaznik').classList.toggle('echo', echo);
   [...el.struny.children].forEach((k, i) => {
     k.classList.toggle('lock', i === zablokowana);
     k.classList.toggle('akt', hz !== null && i === wybrana);
@@ -213,27 +215,51 @@ el.start.onclick = async () => {
     analiza.fftSize = 4096;
     ctx.createMediaStreamSource(strumien).connect(analiza);
     el.start.remove();
+    trzymajEkran();
     sluchaj(analiza);
   } catch (err) {
     el.start.textContent = `Brak dostępu do mikrofonu: ${err.name}`;
   }
 };
 
+// Po szarpnięciu struna wybrzmiewa kilka sekund, ale sygnał cichnie szybciej, niż zdążysz
+// spojrzeć na ekran. Ostatni odczyt zostaje widoczny (przygaszony) jeszcze przez chwilę.
+const PAMIEC_MS = 4000;
+
 function sluchaj(analiza) {
   const buf = new Float32Array(analiza.fftSize);
   const ostatnie = [];           // mediana z 5 ramek — bez niej cyfry skaczą
+  let zapamietane = null, kiedy = 0;
+
   const petla = () => {
     if (!el['ekran-stroik'].hidden) {
       analiza.getFloatTimeDomainData(buf);
-      const hz = yin(buf, ctx.sampleRate);
+      const hz = yin(buf, ctx.sampleRate, { cisza: 0.0035 });
       if (hz > 0) ostatnie.push(hz); else ostatnie.length = 0;
       if (ostatnie.length > 5) ostatnie.shift();
-      rysuj(ostatnie.length >= 3 ? [...ostatnie].sort((a, b) => a - b)[ostatnie.length >> 1] : null);
+
+      if (ostatnie.length >= 3) {
+        zapamietane = [...ostatnie].sort((a, b) => a - b)[ostatnie.length >> 1];
+        kiedy = performance.now();
+        rysuj(zapamietane);
+      } else {
+        const swieze = performance.now() - kiedy < PAMIEC_MS && zapamietane !== null;
+        rysuj(swieze ? zapamietane : null, swieze);
+      }
     }
     requestAnimationFrame(petla);
   };
   petla();
 }
+
+// Strojenie trwa dłużej niż czas do wygaszenia ekranu, a ręce są zajęte gitarą.
+let blokadaEkranu = null;
+async function trzymajEkran() {
+  try { blokadaEkranu = (await navigator.wakeLock?.request('screen')) ?? null; } catch { /* trudno */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && blokadaEkranu?.released !== false) trzymajEkran();
+});
 
 // ——— dźwięk ———
 async function zagraj(midi, opoznienie = 0, dlugosc = 2) {
