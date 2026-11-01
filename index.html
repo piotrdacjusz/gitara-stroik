@@ -391,7 +391,10 @@ function pokazChwyty() {
 odswiezStroje();
 
 // Bez zasięgu aplikacja działa dalej; na Androidzie to też warunek instalacji.
+const bylSW = !!navigator.serviceWorker?.controller;
 navigator.serviceWorker?.register('sw.js').catch(() => { /* trudno, działa bez tego */ });
+// Nowa wersja przejmuje stronę → odśwież raz, żeby od razu pokazać świeży kod.
+navigator.serviceWorker?.addEventListener('controllerchange', () => { if (bylSW) location.reload(); });
 </script>
 </body>
 </html>
