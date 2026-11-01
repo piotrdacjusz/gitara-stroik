@@ -204,7 +204,15 @@ function rysuj(hz, echo = false) {
   el.hz.textContent = `${hz.toFixed(2)} Hz · cel ${cel.hzCel.toFixed(2)} Hz`;
 }
 
-let ctx;
+let ctx, mikrofon = false;
+
+// iOS: bez tego Web Audio milknie przy wyciszonym dzwonku, a przy włączonym mikrofonie
+// gra cichutko z głośniczka rozmów.
+function ustawSesjeAudio() {
+  try { if (navigator.audioSession) navigator.audioSession.type = mikrofon ? 'play-and-record' : 'playback'; }
+  catch { /* starsze przeglądarki */ }
+}
+
 el.start.onclick = async () => {
   try {
     ctx ??= new AudioContext();
@@ -214,7 +222,12 @@ el.start.onclick = async () => {
     });
     const analiza = ctx.createAnalyser();
     analiza.fftSize = 4096;
-    ctx.createMediaStreamSource(strumien).connect(analiza);
+    // Wzmocnienie ×4: wygasająca struna wpada pod próg ciszy znacznie później.
+    const wzmocnienie = ctx.createGain();
+    wzmocnienie.gain.value = 4;
+    ctx.createMediaStreamSource(strumien).connect(wzmocnienie).connect(analiza);
+    mikrofon = true;
+    ustawSesjeAudio();
     el.start.remove();
     trzymajEkran();
     sluchaj(analiza);
@@ -225,23 +238,24 @@ el.start.onclick = async () => {
 
 // Po szarpnięciu struna wybrzmiewa kilka sekund, ale sygnał cichnie szybciej, niż zdążysz
 // spojrzeć na ekran. Ostatni odczyt zostaje widoczny (przygaszony) jeszcze przez chwilę.
-const PAMIEC_MS = 4000;
+const PAMIEC_MS = 8000;
 
 function sluchaj(analiza) {
   const buf = new Float32Array(analiza.fftSize);
   const ostatnie = [];           // mediana z 5 ramek — bez niej cyfry skaczą
-  let zapamietane = null, kiedy = 0;
+  let zapamietane = null, kiedy = 0, braki = 0;
 
   const petla = () => {
     if (!el['ekran-stroik'].hidden) {
       analiza.getFloatTimeDomainData(buf);
       const hz = yin(buf, ctx.sampleRate, { cisza: 0.0035 });
-      if (hz > 0) ostatnie.push(hz); else ostatnie.length = 0;
+      // Pojedyncza ramka bez wyniku (zanikająca struna) nie kasuje odczytu — dopiero seria braków.
+      if (hz > 0) { ostatnie.push(hz); braki = 0; } else if (++braki > 8) ostatnie.length = 0;
       if (ostatnie.length > 5) ostatnie.shift();
 
       if (ostatnie.length >= 3) {
         zapamietane = [...ostatnie].sort((a, b) => a - b)[ostatnie.length >> 1];
-        kiedy = performance.now();
+        if (hz > 0) kiedy = performance.now();
         rysuj(zapamietane);
       } else {
         const swieze = performance.now() - kiedy < PAMIEC_MS && zapamietane !== null;
@@ -263,21 +277,28 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ——— dźwięk ———
-async function zagraj(midi, opoznienie = 0, dlugosc = 2) {
+// Wysokie składowe są po to, żeby niskie struny (E2, D2) było w ogóle słychać z głośniczka telefonu.
+let fala;
+async function zagraj(midi, opoznienie = 0, dlugosc = 2, trzymaj = false) {
   ctx ??= new AudioContext();
+  ustawSesjeAudio();
   await ctx.resume();
+  fala ??= ctx.createPeriodicWave(
+    new Float32Array(7), Float32Array.from([0, 1, 0.8, 0.6, 0.4, 0.25, 0.15]));
   const t = ctx.currentTime + opoznienie;
   const osc = ctx.createOscillator(), g = ctx.createGain();
-  osc.type = 'triangle';
+  osc.setPeriodicWave(fala);
   osc.frequency.value = midiNaHz(midi, +el.a4.value);
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.2, t + 0.02);
+  g.gain.linearRampToValueAtTime(0.25, t + 0.02);
+  if (trzymaj) g.gain.setValueAtTime(0.25, t + dlugosc - 0.4);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dlugosc);
   osc.connect(g).connect(ctx.destination);
   osc.start(t); osc.stop(t + dlugosc);
 }
 
-el.ton.onclick = () => zagraj(struny[zablokowana ?? wybrana].midi);
+// Ton wzorcowy trzyma równą głośność przez 4 s — do strojenia na słuch, nie jak szarpnięta struna.
+el.ton.onclick = () => zagraj(struny[zablokowana ?? wybrana].midi, 0, 4, true);
 
 // ——— chwyty ———
 const SZYBKIE = ['C','D','E','F','G','A','H','Am','Dm','Em','Fm','Gm','Hm','A7','D7','E7','G7','H7'];

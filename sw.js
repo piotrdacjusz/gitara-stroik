@@ -1,6 +1,6 @@
 // Service worker: aplikacja działa bez zasięgu i daje się zainstalować na Androidzie.
 // Strategia: odpowiadaj z pamięci od razu, w tle pobierz świeższą wersję na następny raz.
-const CACHE = 'stroik-v1';
+const CACHE = 'stroik-v2';
 const PLIKI = ['./', './index.html', './core.js', './akordy.js', './manifest.webmanifest',
   './ikona.svg', './apple-touch-icon.png', './ikona-192.png', './ikona-512.png',
   './ikona-maskable-512.png'];
